@@ -375,7 +375,7 @@ function evalFormulaDigit(draws, idx, state) {
   // idx = index current (0 terbaru). state.mx = offset baris (m1/m2/m3)
   const getTerm = (kIdx, m, suf) => {
     const key = NAMEP[kIdx] || "A";
-    const offset = clamp(Number(m) || 1, 1, 22);
+    const offset = Math.max(1, Number(m) || 1);
     const d = draws[idx + offset] || "";
     let v = gp(d, key);
     v = applySuffix(v, suf);
@@ -411,7 +411,7 @@ function computePredForState(draws, target, digitCount, state) {
 }
 
 function makeRandomState(limit) {
-  const maxM = clamp(Number(limit) || 22, 2, 22);
+  const maxM = Math.max(1, Number(limit) || 20);
   const k1 = randInt(0, NAMEP.length - 1);
   const k2 = randInt(0, NAMEP.length - 1);
   const k3 = randInt(0, NAMEP.length - 1);
@@ -547,7 +547,7 @@ function evalKey(draws, sp, b, target, trainWin, ps) {
 function buildMatrixFormulas(target, limit, ps) {
   const sources = ["JD", "JT", "JS", "J3D", "J4D", "A", "C", "K", "E", "J"];
   const formulas = [];
-  const maxB = clamp(Number(limit) || 22, 2, 22);
+  const maxB = Math.max(1, Number(limit) || 20);
   for (const sp of sources) {
     for (let b = 1; b <= maxB - 1; b++) {
       formulas.push({
@@ -711,7 +711,7 @@ function scanLocal({ history, dayFilter, target, digitCount, limit, maxShow, mar
   if (draws.length < 2) return [];
 
   const ps = clamp(Number(digitCount) || 4, 1, 9);
-  const brLimit = clamp(Number(limit) || 22, 2, 22);
+  const brLimit = Math.max(1, Number(limit) || 20);
   // Mode "scrapped UI": server biasanya mengirim state rumus acak.
   // Kita simulasikan dengan random state generator agar formulaStr bisa seperti:
   // A2ty+A3m9+JS2m0.m0
@@ -773,7 +773,7 @@ function calcPjgFromKey(rumusKey, digitCount) {
   // Heuristic sesuai contoh user: JD1m3 => 4 ketika digit=4, J4D3m4 => 6 ketika digit=4
   // Rumus yang paling mendekati dua contoh itu adalah: pjg = (b) + (digitCount - 1)
   // (mis: b=1,digit=4 =>4) (b=3,digit=4 =>6)
-  return clamp(mk.b + (ps - 1), 0, 999);
+  return Math.max(0, mk.b + (ps - 1));
 }
 
 function getFormulaByKey(key) {
@@ -807,20 +807,52 @@ function explainCurrentDigits(res4) {
   return { a, c, k, e, depan2d: a + c, belakang2d: k + e, jumlah2d: pad2((Number(k) + Number(e)) % 100) };
 }
 
+function explainFormulaStep(draws, idx, state) {
+  const explainTerm = (kIdx, m, suf) => {
+    const key = NAMEP[kIdx ?? 0] || "A";
+    const offset = Math.max(1, Number(m) || 1);
+    const d = draws[idx + offset] || "";
+    const rawV = gp(d, key);
+    const finalV = applySuffix(rawV, suf);
+    if (suf && suf !== "off") {
+      return `${key}${offset}[${rawV}➔${suf}:${finalV}]`;
+    }
+    return `${key}${offset}[${rawV}]`;
+  };
+
+  let str = explainTerm(state.k1, state.m1, state.s1);
+  let total = applySuffix(gp(draws[idx + Math.max(1, Number(state.m1) || 1)] || "", NAMEP[state.k1 ?? 0] || "A"), state.s1);
+
+  if (state.op1 && state.k2 !== undefined) {
+    let val2 = applySuffix(gp(draws[idx + Math.max(1, Number(state.m2) || 1)] || "", NAMEP[state.k2] || "A"), state.s2);
+    str += ` ${state.op1} ` + explainTerm(state.k2, state.m2, state.s2);
+    total = state.op1 === "-" ? mod10(total - val2) : mod10(total + val2);
+  }
+  if (state.op2 && state.k3 !== undefined) {
+    let val3 = applySuffix(gp(draws[idx + Math.max(1, Number(state.m3) || 1)] || "", NAMEP[state.k3] || "A"), state.s3);
+    str += ` ${state.op2} ` + explainTerm(state.k3, state.m3, state.s3);
+    total = state.op2 === "-" ? mod10(total - val3) : mod10(total + val3);
+  }
+
+  const finalBase = evalFormulaDigit(draws, idx, state);
+  if (state.sf && state.sf !== "off") {
+    return `(${str} = ${total}).${state.sf} ➔ ${finalBase}`;
+  }
+  return `${str} = ${finalBase}`;
+}
+
 function buildTrekForItem(item, opts) {
   const options = opts || {};
   const marketKey = String(item.market || "").toLowerCase();
   const target = String(item.type || "").toLowerCase();
   const formulaKey = String(item.rumus_key || "");
-  const isMatrix = false;
 
   const dayFilter = options.dayFilter || "";
   const digitCount = clamp(Number(options.digitCount) || 4, 1, 9);
-  const limit = clamp(Number(options.limit) || 20, 2, 22);
+  const limit = Math.max(1, Number(options.limit) || 20);
 
   let rows = getMarketData(marketKey).slice();
   if (dayFilter) rows = rows.filter((x) => (x.day || "").toLowerCase() === String(dayFilter).toLowerCase());
-  rows = rows.slice(0, 2000); // gunakan histori panjang untuk TREK
   const draws = rows.map((x) => x.result).filter((x) => String(x || "").length >= 4);
   if (draws.length < 2) return "Histori kurang (minimal 2 baris).";
 
@@ -830,7 +862,6 @@ function buildTrekForItem(item, opts) {
   lines.push(`TARGET  : ${targetLabel(target)}`);
   lines.push(`DIGIT   : ${digitCount}`);
   lines.push(`LIMIT   : ${limit} brs`);
-  if (isMatrix) lines.push(`ENGINE  : MATRIX sp=${formula.sp} br=${formula.b} ps=${formula.ps}`);
   lines.push("---------------");
 
   // TREK untuk formula string (simulasi local)
@@ -852,11 +883,17 @@ function buildTrekForItem(item, opts) {
     const ok = matchTarget(target, current, poolArr);
     putaran++;
     if (!ok) patah++;
-    lines.push(`${current} : ${poolStr} ${ok ? target : "?"}`);
+    
+    const stepStr = explainFormulaStep(draws, i, state);
+    lines.push(`${current} : ${stepStr}  ➔  ${poolStr} ${ok ? target.toUpperCase() : "ZNK"}`);
   }
 
+  const predBase = evalFormulaDigit(draws, 0, state);
+  const predStep = explainFormulaStep(draws, 0, state);
+  const predVars = isTarget2D(target) ? generateVariants2d(predBase, digitCount).join(" ") : generateVariants(predBase, digitCount).join("");
+
   lines.push("");
-  lines.push(`${target.toUpperCase()} : ${computePredForState(draws, target, digitCount, state)}`);
+  lines.push(`PREDIKSI SELANJUTNYA:\n${predStep}  ➔  ${predVars}`);
   lines.push("===============");
   lines.push(`${putaran} putaran | patah ${patah}x`);
   return lines.join("\n");
@@ -875,7 +912,7 @@ function loadUserMarkets() {
   try {
     const raw = localStorage.getItem("sk_market_data");
     const parsed = raw ? JSON.parse(raw) : {};
-    userMarketData = parsed && typeof parsed === "object" ? parsed : {};
+    userMarketData = (parsed && typeof parsed === "object" && !Array.isArray(parsed)) ? parsed : {};
   } catch {
     userMarketData = {};
   }
@@ -887,7 +924,7 @@ function persistUserMarkets() {
 
 function getMarketData(marketKey) {
   const key = String(marketKey || "").toLowerCase();
-  return userMarketData[key] || DEFAULT_MARKET_DATA[key] || [];
+  return (userMarketData && userMarketData[key]) || DEFAULT_MARKET_DATA[key] || [];
 }
 
 function setMarketData(marketKey, items) {
@@ -1055,7 +1092,7 @@ async function runScan() {
     const dayFilter = qs("#sk-day").value;
     const target = qs("#sk-fcol").value;
     const digitCount = clamp(Number(qs("#sk-digit").value) || 4, 3, 9);
-    const limit = clamp(Number(qs("#sk-limit").value) || 20, 2, 22);
+    const limit = Math.max(1, Number(qs("#sk-limit").value) || 20);
     const maxShow = clamp(parseInt(qs("#sk-maxrumus").value, 10) || 5, 1, 50);
 
     foundItems = [];
@@ -1095,6 +1132,7 @@ function wireUi() {
   });
 
   qs("#sk-market").addEventListener("change", (e) => {
+    qs("#sk-day").value = ""; // Reset Hari agar tidak memfilter hingga kosong (Bug Florida)
     if (historyDirty) return; // user lagi pakai histori manual
     setHistoryForMarket(e.target.value);
   });
@@ -1164,6 +1202,12 @@ function wireUi() {
     e.target.value = String(clamp(n, 1, 100));
   });
 
+  qs("#sk-limit").addEventListener("input", (e) => {
+    const n = parseInt(e.target.value, 10);
+    if (Number.isNaN(n)) return;
+    e.target.value = String(Math.max(1, n));
+  });
+
   function openModal(code, log) {
     qs("#sk-modal-code").textContent = code || "";
     qs("#sk-modal-log").textContent = log || "";
@@ -1218,7 +1262,93 @@ function wireUi() {
     openModal(checked.length === 1 ? checked[0] : `TREK (${checked.length} rumus)`, logs.join("\n"));
   });
 
-  qs("#sk-btn-rekap").addEventListener("click", () => alert("Rekap (demo offline): belum diimplement."));
+  qs("#sk-btn-rekap").addEventListener("click", () => {
+    const checked = qsa(".sk-saved-check").filter((c) => c.checked).map((c) => decodeURIComponent(c.dataset.code || ""));
+    if (!checked.length) {
+      openModal("REKAP", "Pilih dulu rumus di KOLEKSI (centang checkbox) lalu klik REKAP.");
+      return;
+    }
+
+    let formulas = [];
+    checked.forEach(code => {
+      const item = savedItems.find(x => x.code === code);
+      if (item) formulas.push({ code: item.code, type: item.type || 'AI', ai: item.ai });
+    });
+
+    const pool = Array.from({ length: 100 }, (_, i) => String(i).padStart(2, '0'));
+    const tiers = [];
+    
+    for (let i = 0; i < pool.length; i++) {
+      const a = pool[i];
+      const k = parseInt(a[0], 10);
+      const e = parseInt(a[1], 10);
+      const biji = (k + e) % 10;
+      let poin = 0;
+      
+      formulas.forEach(f => {
+        const type = String(f.type).toUpperCase();
+        const digits = String(f.ai).replace(/[^0-9]/g, '').split('');
+        if (digits.length === 0) return;
+
+        if (type === 'K' || type === 'KEP' || type === 'KEPALA') {
+          if (!digits.includes(String(k))) poin++;
+        } else if (type === 'E' || type === 'EKR' || type === 'EKOR') {
+          if (!digits.includes(String(e))) poin++;
+        } else if (type === 'J' || type === 'JML' || type === 'J2D') {
+          if (!digits.includes(String(biji))) poin++;
+        } else {
+          // AI, CB, dll
+          let found = false;
+          for (let d of digits) {
+            if (a.includes(d)) { found = true; break; }
+          }
+          if (!found) poin++;
+        }
+      });
+      
+      if (!tiers[poin]) tiers[poin] = [];
+      tiers[poin].push(a);
+    }
+
+    let lines = [`Rekap — ${formulas.length} Rumus`, ''];
+    formulas.forEach(f => lines.push(`${(f.type+'    ').slice(0,4)} : ${f.ai}`));
+
+    // KRES / Frekuensi kemunculan digit
+    if (formulas.length > 1) {
+      const digitCount = {};
+      formulas.forEach(f => {
+        const digits = new Set(String(f.ai).replace(/[^0-9]/g, '').split('').filter(d => d !== ''));
+        digits.forEach(d => { digitCount[d] = (digitCount[d] || 0) + 1; });
+      });
+      const kresByLevel = {};
+      Object.entries(digitCount).forEach(([digit, count]) => {
+        if (count >= 2) {
+          if (!kresByLevel[count]) kresByLevel[count] = [];
+          kresByLevel[count].push(digit);
+        }
+      });
+      const levels = Object.keys(kresByLevel).map(Number).sort((a, b) => b - a);
+      if (levels.length > 0) {
+        lines.push('---------------');
+        levels.forEach(level => {
+          const digits = kresByLevel[level].slice().sort().join('');
+          lines.push(`KRES ${level}   : ${digits}`);
+        });
+      }
+    }
+
+    lines.push('');
+    for (let p = 0; p <= formulas.length; p++) {
+      if (tiers[p] && tiers[p].length) {
+        lines.push(`${p === 0 ? '[TOP]' : p === 1 ? '[CAD 1]' : p === 2 ? '[CAD 2]' : `[MATI ${p}]`} ${tiers[p].length} Line`);
+        lines.push(tiers[p].join('*')); 
+        lines.push('');
+      }
+    }
+
+    openModal(checked.length === 1 ? checked[0] : `REKAP (${checked.length} rumus)`, lines.join('\n'));
+  });
+
   qs("#sk-btn-save").addEventListener("click", () => alert("Save (demo offline): koleksi sudah tersimpan otomatis di browser."));
 }
 
