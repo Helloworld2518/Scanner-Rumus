@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Scanner Rumus </title>
+  <style>
+    :root{
+      --bg:#f5f7fb;
+      --panel:#ffffff;
+      --ink:#0f172a;
+      --muted:#64748b;
+      --line:#cbd5e1;
+      --blue:#2563eb;
+      --blue2:#1d4ed8;
+      --orange:#f59e0b;
+      --orange2:#d97706;
+      --soft:#f1f5f9;
+      --soft2:#e2e8f0;
+      --ok:#10b981;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background:var(--bg);
+      color:var(--ink);
+    }
+    .wrap{max-width:980px;margin:0 auto;padding:14px}
+    .card{
+      background:var(--panel);
+      border:1px solid var(--soft2);
+      border-radius:14px;
+      box-shadow:0 6px 18px rgba(15,23,42,.06);
+      overflow:hidden;
+    }
+    .section{padding:14px}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .col{flex:1;min-width:160px}
+    label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px}
+    textarea,select,input{
+      width:100%;
+      padding:10px 10px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:#fff;
+      outline:none;
+      font-size:13px;
+    }
+    textarea{
+      min-height:150px;
+      resize:vertical;
+      font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      font-size:12px;
+      line-height:1.35;
+    }
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;gap:7px;
+      border-radius:10px;
+      padding:9px 14px;
+      border:1px solid var(--line);
+      background:var(--soft);
+      color:var(--ink);
+      font-weight:800;
+      cursor:pointer;
+      user-select:none;
+    }
+    .btn:disabled{opacity:.55;cursor:not-allowed}
+    .btn-primary{background:var(--blue);border-color:var(--blue2);color:#fff}
+    .btn-outline{background:#fff}
+    .btn-warn{background:#fffbeb;border-color:#fde68a;color:#b45309}
+    .btn-right{margin-left:auto}
+
+    /* Progress bar style seperti screenshot */
+    #progress-container-lokal{
+      display:none;
+      margin-top:12px;
+      padding-top:12px;
+      border-top:1px dashed var(--line);
+    }
+    .progress-shell{
+      background:#0f172a;
+      border-radius:12px;
+      border:2px solid #1e293b;
+      height:32px;
+      position:relative;
+      overflow:hidden;
+      box-shadow: inset 0 2px 10px rgba(0,0,0,.55);
+    }
+    #progress-bar-lokal{
+      width:0%;
+      height:100%;
+      transition:width .25s ease;
+      background:linear-gradient(90deg,var(--blue),#60a5fa);
+    }
+    #progress-text-lokal{
+      position:absolute;left:0;right:0;top:0;
+      height:100%;
+      display:flex;align-items:center;justify-content:center;
+      font-size:11px;
+      font-weight:900;
+      color:#fff;
+      letter-spacing:.4px;
+      text-shadow:0 1px 2px rgba(0,0,0,.8);
+      font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+    }
+
+    /* Tabel hasil atas */
+    .table-wrap{border:1px solid var(--soft2);border-radius:14px;overflow:hidden}
+    table{width:100%;border-collapse:collapse;table-layout:fixed}
+    th,td{padding:10px 8px;border-bottom:1px solid #e5e7eb;font-size:12px}
+    thead th{
+      background:linear-gradient(135deg,var(--orange2) 0%, var(--orange) 60%, #fbbf24 100%);
+      color:#fff;
+      text-transform:uppercase;
+      font-size:11px;
+      letter-spacing:.35px;
+      border-bottom:none;
+      white-space:nowrap;
+    }
+    td{background:#fff}
+    .mono{
+      font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+    }
+    .badge-ok{
+      display:inline-flex;align-items:center;gap:6px;
+      font-size:10px;font-weight:900;
+      color:var(--ok);
+    }
+
+    /* Koleksi */
+    .k-title{
+      display:flex;align-items:center;gap:10px;
+      padding:10px 4px 12px;
+      border-bottom:2px solid #1e3a8a;
+      margin:10px 0 12px;
+      color:#0b1f66;
+      font-weight:900;
+    }
+    .k-title small{color:var(--muted);font-weight:800}
+    .k-box{
+      border:1px solid #bfdbfe;
+      border-radius:14px;
+      overflow:hidden;
+      background:#fff;
+    }
+    .k-toolbar{
+      display:flex;align-items:center;gap:10px;
+      padding:10px;
+      border-bottom:1px solid #dbeafe;
+      background:#fff;
+      flex-wrap:wrap;
+    }
+    .k-toolbar .col{min-width:180px}
+    .k-table thead th{
+      background:#e5e7eb;
+      color:#0f172a;
+      text-transform:uppercase;
+      font-size:11px;
+      letter-spacing:.35px;
+    }
+    .k-empty{
+      text-align:center;
+      color:var(--muted);
+      font-style:italic;
+      padding:18px;
+    }
+    .k-actions{
+      display:flex;align-items:center;gap:10px;
+      padding:10px;
+      justify-content:space-between;
+      flex-wrap:wrap;
+    }
+    .btn-danger{background:#fff;border-color:#fecaca;color:#fb7185;font-weight:900}
+    .btn-pill{
+      border-radius:10px;
+      padding:9px 14px;
+      border:0;
+      color:#fff;
+      font-weight:900;
+      cursor:pointer;
+    }
+    .btn-trek{background:#f3c47a}
+    .btn-rekap{background:#8aa2ff}
+    .btn-save{background:#7cd3b0}
+    @media (max-width:860px){
+      .btn-right{margin-left:0}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="section">
+        <div class="row">
+          <div class="col">
+            <label for="histori">Histori (per baris)</label>
+            <textarea id="histori" spellcheck="false">4815 | Senin
+9730 | Minggu
+2380 | Sabtu
+1705 | Rabu
+5892 | Kamis
+6347 | Rabu
+7128 | Senin
+4509 | Minggu</textarea>
+            <div style="margin-top:6px; font-size:11px; color:#64748b;">
+              Bisa juga format grid: <span class="mono">6135 9085 2603 ...</span> (banyak angka 4D dalam satu baris).
+            </div>
+          </div>
+          <div class="col">
+            <div class="row">
+              <div class="col">
+                <label for="sk-market">Pasaran</label>
+                <select id="sk-market">
+                  <option value="sgp" selected>SGP</option>
+                  <option value="jpn">JPN</option>
+                  <option value="hk">HK</option>
+                  <option value="syd">SYD</option>
+                </select>
+                <div style="margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                  <input id="sk-market-new" placeholder="Tambah pasaran (contoh: mypasar)" style="flex:1; min-width:180px;" />
+                  <button id="sk-market-add" class="btn btn-outline" type="button">Tambah</button>
+                </div>
+                <div style="margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                  <input id="sk-market-file" type="file" accept=".txt,text/plain" style="flex:1; min-width:180px;" />
+                  <button id="sk-market-import" class="btn btn-outline" type="button">Import TXT</button>
+                </div>
+                <div style="margin-top:6px; font-size:11px; color:#64748b;">
+                  Import akan mengisi histori dari file TXT, lalu kamu bisa simpan ke pasaran via tombol Tambah.
+                </div>
+              </div>
+              <div class="col">
+                <label for="sk-day">Hari</label>
+                <select id="sk-day">
+                  <option value="">Semua Hari</option>
+                  <option>Senin</option><option>Selasa</option><option>Rabu</option><option>Kamis</option><option>Jumat</option><option>Sabtu</option><option>Minggu</option>
+                </select>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <label for="sk-fcol">Tipe</label>
+                <select id="sk-fcol">
+                  <optgroup label="AI Variant">
+                    <option value="cb">Colok Bebas (CB)</option>
+                    <option value="ai2b">AI 2D Belakang</option>
+                    <option value="ai2d">AI 2D Depan</option>
+                  </optgroup>
+                  <optgroup label="Single Varian">
+                    <option value="a">AS (A)</option>
+                    <option value="c">COP (C)</option>
+                    <option value="k">KEPALA (K)</option>
+                    <option value="e">EKOR (E)</option>
+                    <option value="j2d">JUMLAH 2D</option>
+                  </optgroup>
+                </select>
+              </div>
+              <div class="col">
+                <label for="sk-digit">Digit</label>
+                <select id="sk-digit">
+                  <option value="3">3</option>
+                  <option value="4" selected>4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                  <option value="9">9</option>
+                </select>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <label for="sk-limit">Baris</label>
+                <select id="sk-limit">
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                  <option value="9">9</option>
+                  <option value="10">10</option>
+                  <option value="11">11</option>
+                  <option value="12">12</option>
+                  <option value="13">13</option>
+                  <option value="14">14</option>
+                  <option value="15">15</option>
+                  <option value="16">16</option>
+                  <option value="17">17</option>
+                  <option value="18">18</option>
+                  <option value="19">19</option>
+                  <option value="20">20</option>
+                  <option value="21">21</option>
+                  <option value="22">22</option>
+                </select>
+              </div>
+              <div class="col">
+                <label for="sk-maxrumus">Target Rumus</label>
+                <input id="sk-maxrumus" type="number" inputmode="numeric" min="1" step="1" />
+              </div>
+            </div>
+            <div class="row" style="margin-top:12px;">
+              <button id="btn-scan-lokal" class="btn btn-primary" type="button">SCAN</button>
+              <div class="btn-right row" style="gap:10px;flex:1;justify-content:flex-end;">
+                <button class="btn btn-outline" type="button" onclick="skClearResults()">Clear</button>
+                <button class="btn btn-warn" type="button" onclick="skSaveAllFound()">Masukkan Ke Koleksi</button>
+              </div>
+            </div>
+
+            <div id="progress-container-lokal">
+              <div class="progress-shell">
+                <div id="progress-bar-lokal"></div>
+                <div id="progress-text-lokal">&gt;_ MENYIAPKAN RADAR...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:52px;text-align:center;">RMS</th>
+                <th style="text-align:center;">FORMULA</th>
+                <th style="text-align:center;">PRED</th>
+                <th style="width:56px;text-align:center;">PJG</th>
+                <th style="width:64px;text-align:center;">AKSI</th>
+              </tr>
+            </thead>
+            <tbody id="sk-result-body">
+              <tr><td colspan="5" style="padding:16px;color:#64748b;font-style:italic;text-align:center;">Klik SCAN untuk mencari rumus...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="k-title">
+          <span style="display:inline-flex;align-items:center;gap:8px;">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:#0b1f66;color:#fff;font-weight:900;">★</span>
+            KOLEKSI RUMUS SAYA
+          </span>
+          <small><span id="sk-saved-count">0</span> rumus</small>
+        </div>
+
+        <div class="k-box">
+          <div class="k-toolbar">
+            <div class="col">
+              <select id="sk-saved-filter-market">
+                <option value="">Semua Pasaran</option>
+              </select>
+            </div>
+            <div class="col">
+              <select id="sk-saved-filter-type">
+                <option value="">Semua Tipe</option>
+                <option value="AI">AI</option>
+                <option value="CB">CB</option>
+                <option value="K">K</option>
+                <option value="E">E</option>
+              </select>
+            </div>
+            <button id="sk-btn-refresh-all" class="btn btn-outline btn-right" type="button">UPDATE</button>
+          </div>
+          <table class="k-table">
+            <thead>
+              <tr>
+                <th style="width:36px;text-align:center;"><input id="sk-saved-check-all" type="checkbox" /></th>
+                <th style="width:120px;">RMS</th>
+                <th>PRED</th>
+                <th style="width:64px;text-align:center;">PJG</th>
+                <th style="width:90px;text-align:center;">STATUS</th>
+              </tr>
+            </thead>
+            <tbody id="sk-saved-body">
+              <tr><td colspan="5" class="k-empty">Belum ada rumus yang disimpan.</td></tr>
+            </tbody>
+          </table>
+          <div class="k-actions">
+            <button id="sk-btn-delete" class="btn btn-danger" type="button">Hapus</button>
+            <div class="row" style="gap:10px;">
+              <button id="sk-btn-trek" class="btn-pill btn-trek" type="button">TREK</button>
+              <button id="sk-btn-rekap" class="btn-pill btn-rekap" type="button">REKAP</button>
+              <button id="sk-btn-save" class="btn-pill btn-save" type="button">SAVE</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
