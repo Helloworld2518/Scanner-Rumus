@@ -2295,23 +2295,24 @@ function skConfirmCancel() {
                     nonce: (typeof WLA_CONFIG !== 'undefined') ? WLA_CONFIG.nonce : '' },
             success: function(resp) {
                 if (resp && resp.status === 'success' && resp.log) {
-                    skShowTrek(resp.log); // Override dengan PHP — ini sumber kebenaran
+                    const cleanLog = resp.log.split(/\r?\n/).filter(line => !/ZNK/i.test(line)).join('\n');
+                    skShowTrek(cleanLog); // Override dengan PHP — ini sumber kebenaran
 
                     // Update cache localStorage dengan data PHP yang fresh
                     const savedIdx = savedItems.findIndex(x => x.code === code);
                     if (savedIdx !== -1) {
-                        savedItems[savedIdx].trek_log = resp.log;
-                        savedItems[savedIdx].trekLog  = resp.log;
+                        savedItems[savedIdx].trek_log = cleanLog;
+                        savedItems[savedIdx].trekLog  = cleanLog;
                         // Update juga AI dari PHP jika tersedia di log
-                        const aiM = resp.log.match(/^[a-z0-9\/]{1,5}\s*:\s*([\d\s\-]+)$/mi);
+                        const aiM = cleanLog.match(/^[a-z0-9\/]{1,5}\s*:\s*([\d\s\-]+)$/mi);
                         if (aiM) savedItems[savedIdx].ai = aiM[1].trim();
                         localStorage.setItem('wla_sk_saved', JSON.stringify(savedItems));
                     }
                     const foundIdx = foundItems.findIndex(x => x.code === code);
                     if (foundIdx !== -1) {
-                        foundItems[foundIdx].trek_log = resp.log;
-                        foundItems[foundIdx].trekLog  = resp.log;
-                        const aiM2 = resp.log.match(/^[a-z0-9\/]{1,5}\s*:\s*([\d\s\-]+)$/mi);
+                        foundItems[foundIdx].trek_log = cleanLog;
+                        foundItems[foundIdx].trekLog  = cleanLog;
+                        const aiM2 = cleanLog.match(/^[a-z0-9\/]{1,5}\s*:\s*([\d\s\-]+)$/mi);
                         if (aiM2) foundItems[foundIdx].ai = aiM2[1].trim();
                         localStorage.setItem('wla_sk_last_scan', JSON.stringify(foundItems));
                     }
