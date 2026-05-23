@@ -913,7 +913,9 @@ function buildTrekForItem(item, opts) {
     if (!ok) patah++;
     
     const stepStr = explainFormulaStep(draws, i, state);
-    lines.push(`${current} : ${stepStr}  ➔  ${poolStr} ${ok ? target.toUpperCase() : "ZNK"}`);
+    if (ok) {
+      lines.push(`${current} : ${stepStr}  ➔  ${poolStr} ${target.toUpperCase()}`);
+    }
   }
 
   const predBase = evalFormulaDigit(draws, 0, state);
