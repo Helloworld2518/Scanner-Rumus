@@ -216,6 +216,7 @@
                   <option value="jpn">JPN</option>
                   <option value="hk">HK</option>
                   <option value="syd">SYD</option>
+                  <option value="florida">FLORIDA (Coba)</option>
                 </select>
                 <div style="margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                   <input id="sk-market-new" placeholder="Tambah pasaran (contoh: mypasar)" style="flex:1; min-width:180px;" />
@@ -386,5 +387,22 @@
   </div>
 
   <script src="app.js"></script>
+
+  <!-- Modal Trek (offline) -->
+  <div id="sk-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.55); z-index:9999;">
+    <div style="max-width:920px; margin:5vh auto; padding:0 14px;">
+      <div style="background:#fff; border:1px solid #e2e8f0; border-radius:14px; box-shadow:0 14px 40px rgba(15,23,42,.25); overflow:hidden;">
+        <div style="display:flex; align-items:center; gap:10px; padding:12px 12px; border-bottom:1px solid #e2e8f0;">
+          <div style="font-weight:900; color:#0b1f66;">TREK</div>
+          <div id="sk-modal-code" class="mono" style="color:#64748b; font-size:12px; font-weight:800;"></div>
+          <button id="sk-modal-copy" class="btn btn-outline" type="button" style="margin-left:auto;">Copy</button>
+          <button id="sk-modal-close" class="btn btn-outline" type="button">Tutup</button>
+        </div>
+        <div style="padding:12px;">
+          <pre id="sk-modal-log" class="mono" style="margin:0; white-space:pre-wrap; word-break:break-word; background:#0b1220; color:#e6edf7; border-radius:12px; border:1px solid rgba(255,255,255,.08); padding:12px; max-height:60vh; overflow:auto; font-size:12px; line-height:1.35;"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
