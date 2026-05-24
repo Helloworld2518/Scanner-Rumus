@@ -453,8 +453,10 @@ function makeRandomState(limit) {
   const s3 = randomChoice(SUFFIXES);
   const sf = randomChoice(SUFFIXES);
   const ops = ["+", "-"];
-  const use2 = Math.random() < 0.85;
-  const use3 = Math.random() < 0.55;
+  
+  // PEMBATASAN RUMUS: Kurangi kebebasan mesin dalam merangkai rumus panjang.
+  const use2 = Math.random() < 0.50; // Hanya 50% peluang menggunakan 2 variabel (sebelumnya 85%)
+  const use3 = false;                // Matikan penggunaan variabel ke-3 agar tidak "cocoklogi" tanpa batas
   return {
     k1,
     m1,
