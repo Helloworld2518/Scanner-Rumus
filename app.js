@@ -439,7 +439,9 @@ function computePredForState(draws, target, digitCount, state) {
 }
 
 function makeRandomState(limit) {
-  const maxM = Math.max(1, Number(limit) || 20);
+  // Batasi maxM (offset baris) ke 20 agar rumus tidak mengambil array out-of-bounds 
+  // saat limit pencarian diinput hingga 1000.
+  const maxM = Math.min(20, Math.max(2, Number(limit) || 20));
   const k1 = randInt(0, NAMEP.length - 1);
   const k2 = randInt(0, NAMEP.length - 1);
   const k3 = randInt(0, NAMEP.length - 1);
@@ -669,8 +671,11 @@ function generateVariants(baseDigit, count) {
   
   if (r < 0.5) {
     let cur = Number(baseDigit);
+    // Gunakan variasi lompatan (1, 3, 7, atau 9) agar angka tidak sekadar maju +1. 
+    // Angka ganjil ini mencegah infinite loop karena relatif prima terhadap 10.
+    const step = randomChoice([1, 3, 7, 9]);
     while(pool.length < count) {
-      cur = (cur + 1) % 10;
+      cur = (cur + step) % 10;
       if (!pool.includes(String(cur))) pool.push(String(cur));
     }
   } else {
@@ -681,14 +686,17 @@ function generateVariants(baseDigit, count) {
     const v4 = DIGIT_MAP.mb[d] ?? "8";
     for (const v of [v1, v2, v3, v4]) if (!pool.includes(v)) pool.push(v);
     
-    let i = 0;
-    while (pool.length < count && i <= 9) {
-      const s = String(i);
-      if (!pool.includes(s)) pool.push(s);
-      i++;
+    // Isi sisa slot dengan angka yang belum terpakai secara acak 
+    // agar kombinasinya bervariasi jika butuh banyak digit (seperti 9 digit).
+    const sisa = ["0","1","2","3","4","5","6","7","8","9"].filter(x => !pool.includes(x));
+    shuffleInPlace(sisa);
+    for (const s of sisa) {
+      if (pool.length < count) pool.push(s);
     }
   }
-  return pool.slice(0, count).sort();
+  const finalPool = pool.slice(0, count);
+  shuffleInPlace(finalPool);
+  return finalPool;
 }
 
 function pad2(n) {
@@ -740,11 +748,10 @@ function scanLocal({ history, dayFilter, target, digitCount, limit, maxShow, mar
 
   const ps = clamp(Number(digitCount) || 4, 1, 9);
   const brLimit = Math.max(1, Number(limit) || 20);
-  // Mode "scrapped UI": server biasanya mengirim state rumus acak.
-  // Kita simulasikan dengan random state generator agar formulaStr bisa seperti:
-  // A2ty+A3m9+JS2m0.m0
+  const maxResults = Math.max(1, Number(maxShow) || 5);
+
   const candidates = [];
-  const want = clamp(Number(maxShow) || 5, 1, 50) * 6; // oversample biar bisa dedup
+  const want = maxResults * 20; // oversample lebih besar untuk fallback
   for (let i = 0; i < want; i++) {
     const st = makeRandomState(brLimit);
     const rumusKey = buildFormulaStrFromState(st);
@@ -757,27 +764,46 @@ function scanLocal({ history, dayFilter, target, digitCount, limit, maxShow, mar
   }
 
   const out = [];
-  // Dedupe by pred string (mirip kodeasli.html: buang formula dengan kolom prediksi sama)
   const seenPred = new Set();
+  const seenKey = new Set();
+
+  // Phase 1: Utamakan prediksi (AI) yang unik
   for (const c of candidates) {
-    if (out.length >= maxShow) break;
-    if (!c.ai || seenPred.has(c.ai)) continue;
-    seenPred.add(c.ai);
-    out.push({
-      code: `#${String(marketLabel || "MK").toUpperCase()}_${String(target || "T").toUpperCase()}_${c.rumus_key}`,
-      market: String(marketLabel || "").toUpperCase(),
-      type: String(target || "").toUpperCase(),
-      rumus_key: c.rumus_key,
-      ai: c.ai,
-      // PJG di situs = baris (limit)
-      pjg: brLimit,
-      state: c.state,
-    });
+    if (out.length >= maxResults) break;
+    if (!c.ai || seenKey.has(c.rumus_key)) continue;
+
+    if (!seenPred.has(c.ai)) {
+      seenPred.add(c.ai);
+      seenKey.add(c.rumus_key);
+      out.push(c);
+    }
   }
 
+  // Phase 2: Jika target rumus belum tercapai (karena kombinasi digit terbatas),
+  // lengkapi dari sisa rumus unik meski AI-nya berulang.
+  if (out.length < maxResults) {
+    for (const c of candidates) {
+      if (out.length >= maxResults) break;
+      if (!c.ai || seenKey.has(c.rumus_key)) continue;
+
+      seenKey.add(c.rumus_key);
+      out.push(c);
+    }
+  }
+
+  const finalOut = out.map((c) => ({
+    code: `#${String(marketLabel || "MK").toUpperCase()}_${String(target || "T").toUpperCase()}_${c.rumus_key}`,
+    market: String(marketLabel || "").toUpperCase(),
+    type: String(target || "").toUpperCase(),
+    rumus_key: c.rumus_key,
+    ai: c.ai,
+    pjg: brLimit,
+    state: c.state,
+  }));
+
   // Random order output agar tiap scan beda (seperti server)
-  shuffleInPlace(out);
-  return out.slice(0, maxShow);
+  shuffleInPlace(finalOut);
+  return finalOut;
 }
 
 // =========================
@@ -1123,7 +1149,7 @@ async function runScan() {
     const target = qs("#sk-fcol").value;
     const digitCount = clamp(Number(qs("#sk-digit").value) || 4, 3, 9);
     const limit = Math.max(1, Number(qs("#sk-limit").value) || 20);
-    const maxShow = clamp(parseInt(qs("#sk-maxrumus").value, 10) || 5, 1, 50);
+    const maxShow = Math.max(1, parseInt(qs("#sk-maxrumus").value, 10) || 5);
 
     foundItems = [];
     renderFound();
@@ -1229,7 +1255,7 @@ function wireUi() {
   qs("#sk-maxrumus").addEventListener("input", (e) => {
     const n = parseInt(e.target.value, 10);
     if (Number.isNaN(n)) return;
-    e.target.value = String(clamp(n, 1, 100));
+    e.target.value = String(Math.max(1, n));
   });
 
   qs("#sk-limit").addEventListener("input", (e) => {
